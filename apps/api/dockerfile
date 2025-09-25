@@ -1,0 +1,27 @@
+FROM node:24-alpine
+
+# Installer dépendances système utiles (git, openssl, bash)
+RUN apk add --no-cache bash git openssl
+
+WORKDIR /svr/app
+
+# Installer dépendances globales (optionnel, ici rien de spécial)
+# COPY package.json et lock pour install deps
+COPY package*.json ./
+
+# Installer toutes les dépendances (dev incluses)
+RUN npm install
+
+# Copier le reste du projet
+COPY . .
+
+# Variables d’environnement pour dev
+ENV NODE_ENV=development \
+    HOST=0.0.0.0 \
+    PORT=3333
+
+# Expose le port par défaut d’Adonis
+EXPOSE 3333
+
+# Démarre le serveur avec HMR (Hot Module Reload)
+CMD ["npm", "run", "dev"]
