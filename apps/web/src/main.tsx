@@ -15,6 +15,7 @@ const App = () => (
         className="logo vanilla"
         alt="TypeScript logo"
       />
+      <p>ok</p>
     </a>
     <Header title="Web" />
     <div className="card">
