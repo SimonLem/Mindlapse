@@ -13,7 +13,8 @@
     "@repo/ui": "workspace:*",
     "axios": "^1.12.2",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.30.1"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",

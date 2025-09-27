@@ -1,33 +1,23 @@
 import "@repo/ui/globals.css";
 import { createRoot } from "react-dom/client";
-import { useEffect } from "react";
-import api from "../lib/api";
-import typescriptLogo from "/typescript.svg";
-import { Button } from "@repo/ui/components/ui/button";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+
+import { Login } from "./pages/auth/Login";
+import { Dashboard } from "./pages/dashboard/Dashboard";
 
 const App = () => {
-  useEffect(() => {
-    api
-      .get("/")
-      .then((res: any) => console.log(res))
-      .catch((err: any) => console.error(err));
-  }, []);
-
   return (
-    <div>
-      <a href="https://vitejs.dev" target="_blank">
-        <img src="/vite.svg" className="logo" alt="Vite logo" />
-      </a>
-      <a href="https://www.typescriptlang.org/" target="_blank">
-        <img
-          src={typescriptLogo}
-          className="logo vanilla"
-          alt="TypeScript logo"
-        />
-        <p>ok</p>
-      </a>
-      <Button>Button</Button>
-    </div>
+    <BrowserRouter>
+      <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
+        <div className="w-full max-w-3xl">
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="*" element={<Navigate to="/login" replace />} />
+          </Routes>
+        </div>
+      </div>
+    </BrowserRouter>
   );
 };
 
