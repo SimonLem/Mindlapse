@@ -52,7 +52,9 @@ services:
       - api_node_modules:/home/node/app/node_modules
       - api_pnpm_store:/root/.local/share/pnpm/store/v3
     command: >
-      sh -c "pnpm install && pnpm dev"
+      sh -c "pnpm install && pnpm dev &&
+             node ace migration:run &&
+             node ace db:seed"
 
 volumes:
   root_node_modules:

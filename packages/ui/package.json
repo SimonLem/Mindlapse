@@ -39,6 +39,6 @@
       "./src/hooks/*.ts",
       "./src/hooks/*.tsx"
     ],
-    "./components/*": "./src/components/*.tsx"
+    ".": "./src/index.ts"
   }
 }
