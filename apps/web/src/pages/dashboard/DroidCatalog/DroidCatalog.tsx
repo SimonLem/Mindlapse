@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 
 import { Button } from "@repo/ui";
 import {
@@ -28,27 +27,19 @@ import DroidTable from "./DroidTable/DroidTable";
 import DroidForm from "./DroidForm/DroidForm";
 
 import type { Droid } from "@repo/types";
-
 import { useDroidCatalog } from "./context/DroidCatalogContext";
 
+// shadcn toast (sonner)
+import { toast } from "sonner";
+
 export default function DroidCatalog() {
-  const navigate = useNavigate();
-  const {
-    filteredDroids,
-    createDroid,
-    updateDroid,
-    deleteDroid,
-    loading,
-    error,
-  } = useDroidCatalog();
+  const { filteredDroids, createDroid, updateDroid, deleteDroid } =
+    useDroidCatalog();
 
   // CRUD (modals)
   const [editing, setEditing] = useState<Droid | null>(null);
   const [creatingOpen, setCreatingOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<Droid | null>(null);
-
-  if (error) return <div className="p-4 text-red-600">{error}</div>;
-  if (loading) return <div className="p-4">Loading…</div>;
 
   return (
     <div className="grid gap-4">
@@ -56,6 +47,8 @@ export default function DroidCatalog() {
         <div className="text-sm text-muted-foreground">
           {filteredDroids.length} résultat(s)
         </div>
+
+        {/* Create */}
         <Dialog open={creatingOpen} onOpenChange={setCreatingOpen}>
           <DialogTrigger asChild>
             <Button className="gap-2">
@@ -70,12 +63,28 @@ export default function DroidCatalog() {
                 Renseigner les informations du nouveau droïde.
               </DialogDescription>
             </DialogHeader>
-            <DroidForm />
+
+            <DroidForm
+              onSubmit={async (payload) => {
+                try {
+                  await createDroid(payload);
+                  setCreatingOpen(false);
+                  toast.success("Droïde créé ✅");
+                } catch (e: any) {
+                  toast.error(
+                    e?.response?.data?.message ||
+                      e?.message ||
+                      "Création échouée"
+                  );
+                }
+              }}
+            />
           </DialogContent>
         </Dialog>
       </div>
 
       <FilterBar />
+
       <DroidTable
         rows={filteredDroids}
         onEdit={(d) => setEditing(d)}
@@ -85,22 +94,31 @@ export default function DroidCatalog() {
       {/* Edit */}
       <Dialog
         open={!!editing}
-        onOpenChange={(open: any) => !open && setEditing(null)}
+        onOpenChange={(open) => !open && setEditing(null)}
       >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Modifier « {editing?.name} »</DialogTitle>
           </DialogHeader>
-          {/* {editing ? (
+
+          {editing ? (
             <DroidForm
               initial={editing}
-              onSubmit={(payload) => {
-                updateDroid(editing.id, payload);
-                toast.success("Modifications enregistrées");
-                setEditing(null);
+              onSubmit={async (payload) => {
+                try {
+                  await updateDroid(editing.id, payload);
+                  setEditing(null);
+                  toast.success("Modifications enregistrées ✅");
+                } catch (e: any) {
+                  toast.error(
+                    e?.response?.data?.message ||
+                      e?.message ||
+                      "Mise à jour échouée"
+                  );
+                }
               }}
             />
-          ) : null} */}
+          ) : null}
         </DialogContent>
       </Dialog>
 
@@ -122,12 +140,20 @@ export default function DroidCatalog() {
             <AlertDialogCancel>Annuler</AlertDialogCancel>
             <AlertDialogAction
               className="bg-red-600 text-white hover:bg-red-700 focus:ring-red-600"
-              onClick={() => {
-                if (pendingDelete) {
-                  deleteDroid(pendingDelete);
-                  // toast("Supprimé");
+              onClick={async () => {
+                if (!pendingDelete) return;
+                try {
+                  await deleteDroid(pendingDelete);
+                  toast.success("Droïde supprimé ✅");
+                } catch (e: any) {
+                  toast.error(
+                    e?.response?.data?.message ||
+                      e?.message ||
+                      "Suppression échouée"
+                  );
+                } finally {
+                  setPendingDelete(null);
                 }
-                setPendingDelete(null);
               }}
             >
               Supprimer
