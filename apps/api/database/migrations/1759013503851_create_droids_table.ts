@@ -1,7 +1,7 @@
 import { BaseSchema } from '@adonisjs/lucid/schema'
 
 export default class extends BaseSchema {
-  protected tableName = 'products'
+  protected tableName = 'droids'
 
   async up() {
     this.schema.createTable(this.tableName, (table) => {
@@ -11,9 +11,9 @@ export default class extends BaseSchema {
       table.string('slug').notNullable().unique()
       table.text('description').nullable()
       table
-        .enum('type', ['PROTOCOL', 'COMBAT', 'PILOTAGE', 'ASTROMECH', 'MEDICAL', 'REPAIR'], {
+        .enum('type', ['PROTOCOL', 'COMBAT', 'PILOT', 'ASTROMECH', 'MEDICAL', 'REPAIR'], {
           useNative: true,
-          enumName: 'product_type',
+          enumName: 'droid_type',
         })
         .notNullable()
       table
@@ -27,7 +27,7 @@ export default class extends BaseSchema {
           ],
           {
             useNative: true,
-            enumName: 'product_maker',
+            enumName: 'droid_maker',
           }
         )
         .notNullable()
@@ -42,7 +42,7 @@ export default class extends BaseSchema {
 
   async down() {
     this.schema.dropTable(this.tableName)
-    this.schema.raw('DROP TYPE IF EXISTS product_type')
-    this.schema.raw('DROP TYPE IF EXISTS product_maker')
+    this.schema.raw('DROP TYPE IF EXISTS droid_type')
+    this.schema.raw('DROP TYPE IF EXISTS droid_maker')
   }
 }

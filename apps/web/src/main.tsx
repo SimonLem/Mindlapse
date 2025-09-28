@@ -10,8 +10,6 @@ import {
 import { Login } from "./pages/auth/Login";
 import { Dashboard } from "./pages/dashboard/Dashboard";
 
-import api from "@/lib/api";
-
 const router = createBrowserRouter([
   {
     path: "/",

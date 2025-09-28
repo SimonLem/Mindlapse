@@ -1,46 +1,19 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import api from "@/lib/api";
+import Header from "./Header/Header";
+import DroidCatalog from "./DroidCatalog/DroidCatalog";
+import { DroidCatalogProvider } from "./DroidCatalog/context/DroidCatalogContext";
 
 export function Dashboard() {
-  const navigate = useNavigate();
-  const [data, setData] = useState<{ items: any[]; total: number } | null>(
-    null
-  );
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    api
-      .get("/api/v1/products", {
-        params: { page: 1, pageSize: 10, inStock: true },
-      })
-      .then((res) => setData(res.data))
-      .catch((err) => {
-        if (err?.response?.status === 401)
-          navigate("/login", { replace: true });
-        else setError(err?.message ?? "Failed to load products");
-      });
-  }, [navigate]);
-
-  if (error) return <div className="p-4 text-red-600">{error}</div>;
-  if (!data) return <div className="p-4">Loading…</div>;
   return (
-    <div className="p-4">
-      <h2 className="text-xl font-semibold mb-2">Droïdes</h2>
-      <div className="text-sm opacity-70 mb-4">Total: {data.total}</div>
-      <ul className="space-y-2">
-        {data.items.map((p) => (
-          <li key={p.id} className="rounded border p-3">
-            <div className="font-medium">
-              {p.name} <span className="opacity-60">({p.type})</span>
-            </div>
-            <div className="text-sm opacity-80">{p.description}</div>
-            <div className="text-sm mt-1">
-              Prix: {p.price} • Stock: {p.stock}
-            </div>
-          </li>
-        ))}
-      </ul>
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/30">
+      <div className="max-w-6xl mx-auto p-4 md:p-8">
+        <Header
+          title="Gestion des droïdes"
+          subtitle="Ajoutez, modifiez ou supprimez des droïdes de votre catalogue."
+        />
+        <DroidCatalogProvider>
+          <DroidCatalog />
+        </DroidCatalogProvider>
+      </div>
     </div>
   );
 }

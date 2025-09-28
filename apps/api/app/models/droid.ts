@@ -1,16 +1,10 @@
 import { BaseModel, column } from '@adonisjs/lucid/orm'
 import { DateTime } from 'luxon'
 
-export type ProductType =
-  | 'PROTOCOLAIRE'
-  | 'COMBAT'
-  | 'PILOTAGE'
-  | 'ASTROMECH'
-  | 'MEDICAL'
-  | 'REPAIR'
+export type DroidType = 'PROTOCOL' | 'COMBAT' | 'PILOT' | 'ASTROMECH' | 'MEDICAL' | 'REPAIR'
 
-export default class Product extends BaseModel {
-  public static table = 'products'
+export default class Droid extends BaseModel {
+  public static table = 'droids'
 
   @column({ isPrimary: true })
   declare id: number
@@ -25,7 +19,7 @@ export default class Product extends BaseModel {
   declare description: string | null
 
   @column()
-  declare type: ProductType
+  declare type: DroidType
 
   @column()
   declare maker: string | null

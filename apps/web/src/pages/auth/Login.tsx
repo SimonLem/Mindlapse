@@ -26,7 +26,6 @@ export function Login({ className, ...props }: React.ComponentProps<"div">) {
     setSubmitting(true);
 
     try {
-      // utilise le client axios
       await api.post(
         "/api/v1/auth/login",
         { email, password },
@@ -38,7 +37,6 @@ export function Login({ className, ...props }: React.ComponentProps<"div">) {
         }
       );
 
-      // cookie de session posé -> on va sur le dashboard (routage v7)
       navigate("/dashboard", { replace: true });
     } catch (err: any) {
       const msg =

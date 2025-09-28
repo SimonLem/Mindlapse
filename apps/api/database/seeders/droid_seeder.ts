@@ -6,7 +6,7 @@ export default class extends BaseSeeder {
 
   async run() {
     const now = new Date()
-    await db.table('products').insert([
+    await db.table('droids').insert([
       {
         name: 'R2-D2',
         slug: 'r2-d2',
