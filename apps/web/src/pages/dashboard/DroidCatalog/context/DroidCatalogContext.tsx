@@ -1,13 +1,40 @@
 import React from "react";
 import api from "@/lib/api";
-import type { Droid } from "@/lib/droids/types";
+import type { Droid } from "@repo/types";
+import { useLocalStorage } from "@/lib/hooks/useLocalStorage";
+
+/** Filtres centralisés dans le context */
+export type StockFilter = "ALL" | "IN" | "OUT";
+export type Filters = {
+  name: string; // texte libre
+  priceMin: string; // string pour binder l'<Input />
+  priceMax: string; // idem
+  stock: StockFilter;
+};
+
+const DEFAULT_FILTERS: Filters = {
+  name: "",
+  priceMin: "",
+  priceMax: "",
+  stock: "ALL",
+};
+
+const FILTERS_STORAGE_KEY = "droid_filters_v1";
+
+type Query = { page?: number; pageSize?: number };
 
 type ContextValue = {
-  items: Droid[];
-  total: number;
+  droids: Droid[]; // liste brute depuis l’API
+  filteredDroids: Droid[]; // liste filtrée côté client
+  total: number; // total brut (meta côté API)
   loading: boolean;
   error: string | null;
-  reload: (params?: Record<string, any>) => Promise<void>;
+
+  filters: Filters;
+  setFilters: React.Dispatch<React.SetStateAction<Filters>>;
+  resetFilters: () => void;
+
+  reload: (params?: Query) => Promise<void>;
   createDroid: (payload: any) => Promise<any>;
   updateDroid: (id: number, payload: any) => Promise<any>;
   deleteDroid: (droidOrId: number | { id: number }) => Promise<void>;
@@ -20,36 +47,40 @@ export function DroidCatalogProvider({
 }: {
   children: React.ReactNode;
 }) {
-  const [items, setItems] = React.useState<Droid[]>([]);
-  const [total, setTotal] = React.useState<number>(0);
-  const [loading, setLoading] = React.useState<boolean>(true);
+  const [droids, setDroids] = React.useState<Droid[]>([]);
+  const [total, setTotal] = React.useState(0);
+  const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
-  // On mémorise les derniers paramètres envoyés, de manière large
-  const [lastQuery, setLastQuery] = React.useState<Record<string, any>>({
+  // Pagination/params serveur (la recherche se fait en client ici)
+  const [lastQuery, setLastQuery] = React.useState<Query>({
     page: 1,
     pageSize: 10,
-    inStock: true,
   });
 
-  const reload = React.useCallback(
-    async (params?: Record<string, any>) => {
-      setLoading(true);
+  // Filtres centralisés + persistance localStorage
+  const [filters, setFilters] = useLocalStorage<Filters>(
+    FILTERS_STORAGE_KEY,
+    DEFAULT_FILTERS
+  );
 
-      return;
+  const resetFilters = React.useCallback(() => {
+    setFilters(DEFAULT_FILTERS);
+  }, [setFilters]);
+
+  const reload = React.useCallback(
+    async (params?: Query) => {
+      setLoading(true);
       try {
         const query = { ...lastQuery, ...(params || {}) };
         const res = await api.get<any>("/api/v1/droids", { params: query });
 
-        // On tolère plusieurs formats de réponse pour éviter de “casser”
-        // - format attendu: { items, total, page, pageSize }
-        // - fallback si jamais l'API renvoie directement un tableau
         const data = res?.data;
         if (Array.isArray(data)) {
-          setItems(data as Droid[]);
+          setDroids(data as Droid[]);
           setTotal(data.length);
         } else {
-          setItems((data?.items ?? []) as Droid[]);
+          setDroids((data?.items ?? []) as Droid[]);
           setTotal(Number(data?.total ?? 0));
         }
 
@@ -72,9 +103,8 @@ export function DroidCatalogProvider({
         headers: { "Content-Type": "application/json" },
       });
       const created = res?.data ?? payload;
-      // On essaie d’insérer en tête si on a un id, sinon on reload
       if (created && typeof created === "object" && "id" in created) {
-        setItems((prev) => [created as Droid, ...prev]);
+        setDroids((prev) => [created as Droid, ...prev]);
         setTotal((t) => t + 1);
       } else {
         await reload();
@@ -89,7 +119,9 @@ export function DroidCatalogProvider({
       headers: { "Content-Type": "application/json" },
     });
     const updated = res?.data ?? { id, ...payload };
-    setItems((prev) => prev.map((d) => (d.id === id ? (updated as Droid) : d)));
+    setDroids((prev) =>
+      prev.map((d) => (d.id === id ? (updated as Droid) : d))
+    );
     return updated;
   }, []);
 
@@ -97,23 +129,42 @@ export function DroidCatalogProvider({
     async (droidOrId: number | { id: number }) => {
       const id = typeof droidOrId === "number" ? droidOrId : droidOrId.id;
       await api.delete<void>(`/api/v1/droids/${id}`);
-      setItems((prev) => prev.filter((d) => d.id !== id));
+      setDroids((prev) => prev.filter((d) => d.id !== id));
       setTotal((t) => Math.max(0, t - 1));
     },
     []
   );
 
+  // Calcul de la liste filtrée (client-side)
+  const filteredDroids = React.useMemo(() => {
+    const name = filters.name.trim().toLowerCase();
+    const min = filters.priceMin ? Number(filters.priceMin) : null;
+    const max = filters.priceMax ? Number(filters.priceMax) : null;
+
+    return droids.filter((d) => {
+      if (name && !d.name.toLowerCase().includes(name)) return false;
+      if (min !== null && d.price < min) return false;
+      if (max !== null && d.price > max) return false;
+      if (filters.stock === "IN" && d.stock <= 0) return false;
+      if (filters.stock === "OUT" && d.stock > 0) return false;
+      return true;
+    });
+  }, [droids, filters]);
+
   // Chargement initial
   React.useEffect(() => {
     reload().catch(() => void 0);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const value: ContextValue = {
-    items,
+    droids,
+    filteredDroids,
     total,
     loading,
     error,
+    filters,
+    setFilters,
+    resetFilters,
     reload,
     createDroid,
     updateDroid,
