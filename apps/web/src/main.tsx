@@ -7,11 +7,12 @@ import {
   redirect,
 } from "react-router-dom";
 
+import { ThemeProvider } from "@/theme/ThemeProvider";
+
 import { Login } from "./pages/auth/Login";
 import { Dashboard } from "./pages/dashboard/Dashboard";
-import { AuthProvider } from "./lib/contexts/AuthContext";
 
-type User = { id: number; email: string; name?: string };
+type User = { id: number; email: string; fullName: string | null };
 
 const API_BASE = "http://localhost:3333";
 
@@ -44,8 +45,8 @@ const router = createBrowserRouter([
 
 createRoot(document.getElementById("app")!).render(
   <React.StrictMode>
-    <AuthProvider>
+    <ThemeProvider>
       <RouterProvider router={router} />
-    </AuthProvider>
+    </ThemeProvider>
   </React.StrictMode>
 );

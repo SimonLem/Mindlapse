@@ -56,9 +56,14 @@ export function Login({ className, ...props }: React.ComponentProps<"div">) {
         <div className={cn("flex flex-col gap-6", className)} {...props}>
           <Card>
             <CardHeader>
-              <CardTitle>Login to your account</CardTitle>
+              <img
+                src="https://upload.wikimedia.org/wikipedia/commons/7/75/Emblem_of_the_First_Galactic_Empire.svg"
+                alt="Empire Emblem"
+                className="h-20 w-20 mx-auto mb-4"
+              />
+              <CardTitle>Intranet impérial</CardTitle>
               <CardDescription>
-                Enter your email below to login to your account
+                Entrez vos identifiants pour accéder à la gestion des droïdes.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -86,7 +91,7 @@ export function Login({ className, ...props }: React.ComponentProps<"div">) {
                         className="ml-auto inline-block text-sm underline-offset-4 hover:underline"
                         onClick={(e) => e.preventDefault()}
                       >
-                        Forgot your password?
+                        Mot de de passe oublié?
                       </a>
                     </div>
                     <Input

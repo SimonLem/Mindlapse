@@ -29,25 +29,19 @@ import DroidForm from "./DroidForm/DroidForm";
 import type { Droid } from "@repo/types";
 import { useDroidCatalog } from "./context/DroidCatalogContext";
 
-// shadcn toast (sonner)
 import { toast } from "sonner";
 
 export default function DroidCatalog() {
   const { filteredDroids, createDroid, updateDroid, deleteDroid } =
     useDroidCatalog();
 
-  // CRUD (modals)
   const [editing, setEditing] = useState<Droid | null>(null);
-  const [creatingOpen, setCreatingOpen] = useState(false);
+  const [creatingOpen, setCreatingOpen] = useState<boolean>(false);
   const [pendingDelete, setPendingDelete] = useState<Droid | null>(null);
 
   return (
     <div className="grid gap-4">
-      <div className="flex flex-wrap items-center justify-between">
-        <div className="text-sm text-muted-foreground">
-          {filteredDroids.length} résultat(s)
-        </div>
-
+      <div className="flex flex-wrap items-center justify-end">
         {/* Create */}
         <Dialog open={creatingOpen} onOpenChange={setCreatingOpen}>
           <DialogTrigger asChild>
