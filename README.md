@@ -1,6 +1,6 @@
 # `Intranet impérial` — Mindlapse
 
-> Réalisé pour le **test technique Mindlapse**. Monorepo Turborepo (React/Vite + AdonisJS) avec une lib UI partagée.
+Réalisé pour le **test technique Mindlapse**. Monorepo Turborepo (React/Vite + AdonisJS).
 
 ---
 
@@ -8,11 +8,11 @@
 
 - **Docker** 
 
----
+## Comment lancer le projet
 
-## How to start project
+1) Récuperer et placer les fichiers .env au bon endroit
 
-Démarrage complet via Docker (API + Front + DB) :
+2) Démarrage complet via Docker (API + Front + DB) :
 
 ```bash
 docker compose -f infra/docker/compose.full.yaml up --build
@@ -27,7 +27,7 @@ Services exposés :
 
 ---
 
-## Apps and Packages
+## Apps et Packages
 
 - `apps/web` — React + [Vite](https://vitejs.dev) (TypeScript)
 - `apps/api` — AdonisJS (Lucid, migrations/seeders)
@@ -38,7 +38,7 @@ Services exposés :
 
 ---
 
-## Utilities
+## Utilitaires
 
 - [TypeScript](https://www.typescriptlang.org/) pour le typage
 - [ESLint](https://eslint.org/) pour le lint
