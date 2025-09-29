@@ -17,8 +17,7 @@ import { Boxes, DollarSign, Filter as FilterIcon } from "lucide-react";
 import { useDroidCatalog } from "../context/DroidCatalogContext";
 
 export default function FilterBar() {
-  const { filters, setFilters, resetFilters, filteredDroids } =
-    useDroidCatalog();
+  const { filters, setFilters, resetFilters, total, reload, loading } = useDroidCatalog();
 
   const activeCount =
     (filters.name ? 1 : 0) +
@@ -110,13 +109,22 @@ export default function FilterBar() {
 
             <div className="col-span-full flex items-center justify-between gap-2 pt-2">
               <div className="text-sm text-muted-foreground">
-                {filteredDroids.length} résultat(s)
+                {loading ? "Chargement…" : `${total} résultat(s)`}
               </div>
               <div className="flex gap-2">
-                <Button type="button" variant="ghost" onClick={resetFilters}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={resetFilters}
+                >
                   Réinitialiser
                 </Button>
-                <Button type="button">Appliquer</Button>
+                <Button
+                  type="button"
+                  onClick={() => reload({ page: 1 })}
+                >
+                  Appliquer
+                </Button>
               </div>
             </div>
           </div>

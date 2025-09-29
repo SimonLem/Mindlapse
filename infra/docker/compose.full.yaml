@@ -1,37 +1,22 @@
-version: "3.9"
-
 services:
-  dev-builder:
-    image: node:20-alpine
-    working_dir: /repo
-    volumes:
-      - ../..:/repo
-      - pnpm_store:/root/.local/share/pnpm/store/v3
-    environment:
-      COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
-      NODE_ENV: development
-    command: >
-      sh -lc "
-      corepack enable &&
-      pnpm -w install &&
-      pnpm --filter @repo/types build:watch
-      "
   postgres:
-    image: postgres:16
+    image: postgres:13
     container_name: postgres
-    volumes:
-      - postgres_volume:/var/lib/postgresql/data
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-    ports:
-      - "5432:5432"
+      POSTGRES_DB: mindlapse_db
+    ports: ["5432:5432"]
+    volumes:
+      - postgres_volume:/var/lib/postgresql/data
 
-  api:
-    image: node:20-alpine
+  adonis_app:
+    container_name: adonis_app
     depends_on:
       - postgres
-      - dev-builder
+    build:
+      context: ../../apps/api
+      dockerfile: dockerfile
     working_dir: /repo/apps/api
     ports:
       - "3333:3333"
@@ -39,41 +24,57 @@ services:
     env_file:
       - ../../.env
     environment:
-      COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
-      PG_HOST: postgres
       NODE_ENV: development
+      PG_HOST: postgres
     volumes:
       - ../..:/repo
       - pnpm_store:/root/.local/share/pnpm/store/v3
+      - root_node_modules:/repo/node_modules
+      - web_node_modules:/repo/apps/web/node_modules
+      - ui_node_modules:/repo/packages/ui/node_modules
     command: >
       sh -lc "
-      corepack enable &&
-      pnpm -w install &&
-      node ../..//apps/api/ace migration:run --force &&
-      node ../..//apps/api/ace db:seed &&
-      pnpm dev
+        corepack enable &&
+        pnpm -w install --config.package-import-method=copy &&
+        pnpm --filter @repo/types run build &&
+        pnpm --filter api install --config.package-import-method=copy &&
+        pnpm --filter api exec node ace migration:run&&
+        pnpm --filter api exec node ace db:seed &&
+        pnpm --filter api dev
       "
 
   web:
-    image: node:20-alpine
-    depends_on:
-      - api
-      - dev-builder
+    build:
+      context: ../../apps/web
     working_dir: /repo/apps/web
+    depends_on:
+      - adonis_app
     ports:
-      - "5173:5173"
+      - "0.0.0.0:5173:5173"
     environment:
-      COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
       NODE_ENV: development
     volumes:
       - ../..:/repo
       - pnpm_store:/root/.local/share/pnpm/store/v3
+      - api_node_modules:/repo/apps/api/node_modules
+      - root_node_modules:/repo/node_modules
+      - web_node_modules:/repo/apps/web/node_modules
+      - ui_node_modules:/repo/packages/ui/node_modules
     command: >
       sh -lc "
-      corepack enable &&
-      pnpm -w install &&
-      pnpm --filter web dev --host 0.0.0.0 --port 5173 --strictPort
+        corepack enable &&
+        pnpm config set auto-install-peers true &&
+        pnpm -w install --no-frozen-lockfile --config.package-import-method=copy &&
+        pnpm --filter @repo/ui install --no-frozen-lockfile --config.package-import-method=copy &&
+        pnpm --filter web install --no-frozen-lockfile --config.package-import-method=copy &&
+        pnpm --filter @repo/ui run build &&
+        pnpm exec vite -- --clearScreen false --host 0.0.0.0 --port 5173 --strictPort
       "
+
 volumes:
   pnpm_store:
   postgres_volume:
+  root_node_modules:
+  web_node_modules:
+  ui_node_modules:
+  api_node_modules:

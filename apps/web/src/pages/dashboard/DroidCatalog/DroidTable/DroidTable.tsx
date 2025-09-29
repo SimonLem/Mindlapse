@@ -1,4 +1,3 @@
-import { useMemo, useState } from "react";
 import {
   Badge,
   Button,
@@ -13,8 +12,9 @@ import {
   TableHeader,
   TableRow,
 } from "@repo/ui";
-import type { Droid, DroidType, DroidMaker } from "@repo/types";
 import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import type { Droid, DroidMaker, DroidType } from "@repo/types";
+import { useDroidCatalog } from "../context/DroidCatalogContext";
 
 const TYPE_LABELS: Record<DroidType, string> = {
   PROTOCOL: "Protocolaire",
@@ -33,21 +33,17 @@ const MAKER_LABELS: Record<DroidMaker, string> = {
 };
 
 type DroidTableProps = {
-  rows: Droid[];
+  rows?: Droid[]; // optionnel désormais
   onEdit: (d: Droid) => void;
   onDelete: (d: Droid) => void;
-  pageSize?: number;
 };
 
 export default function DroidTable(props: DroidTableProps) {
-  const { rows, onEdit, onDelete, pageSize = 10 } = props;
+  const { onEdit, onDelete } = props;
+  const { droids, total, page, pageSize, totalPages, hasPrev, hasNext, goToPage } =
+    useDroidCatalog();
 
-  const [page, setPage] = useState(0);
-  const pages = Math.max(1, Math.ceil(rows.length / pageSize));
-  const pageRows = useMemo(
-    () => rows.slice(page * pageSize, page * pageSize + pageSize),
-    [rows, page, pageSize]
-  );
+  const rows = props.rows ?? droids;
 
   return (
     <div className="grid gap-3">
@@ -64,7 +60,7 @@ export default function DroidTable(props: DroidTableProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {pageRows.map((d) => (
+            {rows.map((d) => (
               <TableRow key={d.id}>
                 <TableCell className="font-medium">{d.name}</TableCell>
                 <TableCell className="hidden md:table-cell">
@@ -97,10 +93,7 @@ export default function DroidTable(props: DroidTableProps) {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                        onClick={() => onEdit(d)}
-                        className="gap-2"
-                      >
+                      <DropdownMenuItem onClick={() => onEdit(d)} className="gap-2">
                         <Pencil className="w-4 h-4" />
                         Modifier
                       </DropdownMenuItem>
@@ -116,12 +109,9 @@ export default function DroidTable(props: DroidTableProps) {
                 </TableCell>
               </TableRow>
             ))}
-            {pageRows.length === 0 && (
+            {rows.length === 0 && (
               <TableRow>
-                <TableCell
-                  colSpan={6}
-                  className="text-center text-muted-foreground"
-                >
+                <TableCell colSpan={6} className="text-center text-muted-foreground">
                   Aucun résultat
                 </TableCell>
               </TableRow>
@@ -129,45 +119,22 @@ export default function DroidTable(props: DroidTableProps) {
           </TableBody>
         </Table>
       </div>
+
       <div className="flex items-center justify-between gap-2">
         <div className="text-sm text-muted-foreground">
-          Page {page + 1} / {pages}
+          Page {page} / {totalPages} • {total} éléments
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage(0)}
-            disabled={page === 0}
-            aria-label="Première page"
-          >
+          <Button variant="outline" size="sm" onClick={() => goToPage(1)} disabled={!hasPrev} aria-label="Première page">
             {"<<"}
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage((p) => Math.max(0, p - 1))}
-            disabled={page === 0}
-            aria-label="Page précédente"
-          >
+          <Button variant="outline" size="sm" onClick={() => goToPage(page - 1)} disabled={!hasPrev} aria-label="Page précédente">
             {"<"}
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage((p) => Math.min(pages - 1, p + 1))}
-            disabled={page >= pages - 1}
-            aria-label="Page suivante"
-          >
+          <Button variant="outline" size="sm" onClick={() => goToPage(page + 1)} disabled={!hasNext} aria-label="Page suivante">
             {">"}
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage(pages - 1)}
-            disabled={page >= pages - 1}
-            aria-label="Dernière page"
-          >
+          <Button variant="outline" size="sm" onClick={() => goToPage(totalPages)} disabled={!hasNext} aria-label="Dernière page">
             {">>"}
           </Button>
         </div>

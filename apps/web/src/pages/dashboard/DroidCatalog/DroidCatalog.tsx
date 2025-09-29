@@ -32,7 +32,8 @@ import { useDroidCatalog } from "./context/DroidCatalogContext";
 import { toast } from "sonner";
 
 export default function DroidCatalog() {
-  const { filteredDroids, createDroid, updateDroid, deleteDroid } =
+  // ⬇️ plus de filteredDroids (pagination côté serveur)
+  const { createDroid, updateDroid, deleteDroid } =
     useDroidCatalog();
 
   const [editing, setEditing] = useState<Droid | null>(null);
@@ -80,7 +81,6 @@ export default function DroidCatalog() {
       <FilterBar />
 
       <DroidTable
-        rows={filteredDroids}
         onEdit={(d) => setEditing(d)}
         onDelete={(d) => setPendingDelete(d)}
       />

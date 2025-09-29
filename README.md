@@ -1,32 +1,66 @@
-# `Turborepo` Vite starter
+# `Intranet impérial` — Mindlapse
 
-This is a community-maintained example. If you experience a problem, please submit a pull request with a fix. GitHub Issues will be closed.
+> Réalisé pour le **test technique Mindlapse**. Monorepo Turborepo (React/Vite + AdonisJS) avec une lib UI partagée.
 
-## Using this example
+---
 
-Run the following command:
+## Prérequis
 
-```sh
-npx create-turbo@latest -e with-vite-react
+- **Docker** 
+
+---
+
+## How to start project
+
+Démarrage complet via Docker (API + Front + DB) :
+
+```bash
+docker compose -f infra/docker/compose.full.yaml up --build
 ```
 
-## What's inside?
+Services exposés :
+- Front (Vite) : http://localhost:5173  
+- API (AdonisJS) : http://localhost:3333  
+- Postgres : localhost:5432 
 
-This Turborepo includes the following packages and apps:
+> Les migrations + seed sont appliqués au démarrage.
 
-### Apps and Packages
+---
 
-- `web`: react [vite](https://vitejs.dev) ts app
-- `@repo/ui`: a stub component library shared by `web` application
-- `@repo/eslint-config`: shared `eslint` configurations
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+## Apps and Packages
 
-Each package and app is 100% [TypeScript](https://www.typescriptlang.org/).
+- `apps/web` — React + [Vite](https://vitejs.dev) (TypeScript)
+- `apps/api` — AdonisJS (Lucid, migrations/seeders)
+- `packages/types` — `@repo/types`, lib de types partagée
+- `packages/ui` — `@repo/ui`, lib de composants partagée
+- `packages/eslint-config` — `@repo/eslint-config`, config ESLint partagée
+- `packages/typescript-config` — `@repo/typescript-config`, `tsconfig.json` partagés
 
-### Utilities
+---
 
-This Turborepo has some additional tools already setup for you:
+## Utilities
 
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
+- [TypeScript](https://www.typescriptlang.org/) pour le typage
+- [ESLint](https://eslint.org/) pour le lint
+- [Prettier](https://prettier.io) pour le formatage
+
+---
+
+## UI / Styling
+
+- **Tailwind CSS** (utility-first)
+- **shadcn/ui** (composants React basés sur Radix UI)
+- **lucide-react** (icônes)
+- **tailwindcss-animate** (animations)
+
+---
+
+## API
+
+- `GET /api/v1/droids` — liste paginée  
+  Params : `page`, `pageSize (<=100)`, `q`, `type`, `inStock`, `priceMin`, `priceMax`
+- `POST /api/v1/droids` — création
+- `PUT /api/v1/droids/:id` — mise à jour
+- `DELETE /api/v1/droids/:id` — suppression
+
+---

@@ -1,15 +1,15 @@
 import React from "react";
 import api from "@/lib/api";
-import type { Droid } from "@repo/types";
+import type { Droid, DroidMaker, DroidType } from "@repo/types";
 import { useLocalStorage } from "@/lib/hooks/useLocalStorage";
 
 /** Filtres centralisés dans le context */
 export type StockFilter = "ALL" | "IN" | "OUT";
 export type Filters = {
-  name: string; // texte libre
-  priceMin: string; // string pour binder l'<Input />
-  priceMax: string; // idem
-  stock: StockFilter;
+  name: string;       // texte libre -> q
+  priceMin: string;   // string pour l'<Input />
+  priceMax: string;   // idem
+  stock: StockFilter; // -> inStock
 };
 
 const DEFAULT_FILTERS: Filters = {
@@ -21,12 +21,28 @@ const DEFAULT_FILTERS: Filters = {
 
 const FILTERS_STORAGE_KEY = "droid_filters_v1";
 
-type Query = { page?: number; pageSize?: number };
+type Query = {
+  page?: number;
+  pageSize?: number;
+  q?: string;
+  inStock?: boolean;
+  priceMin?: number;
+  priceMax?: number;
+  type?: DroidType;
+  maker?: DroidMaker;
+};
 
 type ContextValue = {
-  droids: Droid[]; // liste brute depuis l’API
-  filteredDroids: Droid[]; // liste filtrée côté client
-  total: number; // total brut (meta côté API)
+  droids: Droid[];     // items de la page courante
+  total: number;       // total côté serveur
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  hasPrev: boolean;
+  hasNext: boolean;
+  setPageSize: (n: number) => void;
+  goToPage: (p: number) => Promise<void>;
+
   loading: boolean;
   error: string | null;
 
@@ -42,124 +58,147 @@ type ContextValue = {
 
 const DroidCatalogContext = React.createContext<ContextValue | null>(null);
 
-export function DroidCatalogProvider({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export function DroidCatalogProvider({ children }: { children: React.ReactNode }) {
   const [droids, setDroids] = React.useState<Droid[]>([]);
   const [total, setTotal] = React.useState(0);
+  const [page, setPage] = React.useState(1);
+  const [pageSize, setPageSizeState] = React.useState(10);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
-  // Pagination/params serveur (la recherche se fait en client ici)
-  const [lastQuery, setLastQuery] = React.useState<Query>({
-    page: 1,
-    pageSize: 10,
-  });
-
   // Filtres centralisés + persistance localStorage
-  const [filters, setFilters] = useLocalStorage<Filters>(
-    FILTERS_STORAGE_KEY,
-    DEFAULT_FILTERS
-  );
+  const [filters, setFilters] = useLocalStorage<Filters>(FILTERS_STORAGE_KEY, DEFAULT_FILTERS);
 
   const resetFilters = React.useCallback(() => {
     setFilters(DEFAULT_FILTERS);
   }, [setFilters]);
 
+  const buildParamsFromState = React.useCallback((): Query => {
+    const q = filters.name.trim() || undefined;
+    const priceMin = filters.priceMin ? Number(filters.priceMin) : undefined;
+    const priceMax = filters.priceMax ? Number(filters.priceMax) : undefined;
+    const inStock =
+      filters.stock === "IN" ? true : filters.stock === "OUT" ? false : undefined;
+
+    return {
+      page,
+      pageSize,
+      q,
+      inStock,
+      priceMin,
+      priceMax,
+    };
+  }, [filters, page, pageSize]);
+
   const reload = React.useCallback(
     async (params?: Query) => {
       setLoading(true);
       try {
-        const query = { ...lastQuery, ...(params || {}) };
-        const res = await api.get<any>("/api/v1/droids", { params: query });
+        // merge params explicites avec l’état courant
+        const merged: Query = { ...buildParamsFromState(), ...(params || {}) };
+
+        // si on change de page/pageSize via params, mets à jour l’état local avant call
+        if (typeof merged.page === "number" && merged.page !== page) setPage(merged.page);
+        if (typeof merged.pageSize === "number" && merged.pageSize !== pageSize)
+          setPageSizeState(merged.pageSize);
+
+        const res = await api.get<any>("/api/v1/droids", { params: merged });
 
         const data = res?.data;
-        if (Array.isArray(data)) {
-          setDroids(data as Droid[]);
-          setTotal(data.length);
-        } else {
-          setDroids((data?.items ?? []) as Droid[]);
-          setTotal(Number(data?.total ?? 0));
-        }
+        // format attendu: { items, total, page, pageSize }
+        const items: Droid[] = Array.isArray(data) ? (data as Droid[]) : (data?.items ?? []);
+        const totalCount: number = Array.isArray(data) ? items.length : Number(data?.total ?? 0);
+        const currentPage: number = Number(data?.page ?? merged.page ?? 1);
+        const currentPageSize: number = Number(data?.pageSize ?? merged.pageSize ?? 10);
 
-        setLastQuery(query);
+        setDroids(items);
+        setTotal(totalCount);
+        setPage(currentPage);
+        setPageSizeState(currentPageSize);
         setError(null);
       } catch (e: any) {
-        setError(
-          e?.response?.data?.message || e?.message || "Failed to load droids"
-        );
+        setError(e?.response?.data?.message || e?.message || "Failed to load droids");
       } finally {
         setLoading(false);
       }
     },
-    [lastQuery]
+    [buildParamsFromState, page, pageSize]
   );
 
-  const createDroid = React.useCallback(
-    async (payload: any) => {
-      const res = await api.post<any>("/api/v1/droids", payload, {
-        headers: { "Content-Type": "application/json" },
-      });
-      const created = res?.data ?? payload;
-      if (created && typeof created === "object" && "id" in created) {
-        setDroids((prev) => [created as Droid, ...prev]);
-        setTotal((t) => t + 1);
-      } else {
-        await reload();
-      }
-      return created;
+  const goToPage = React.useCallback(
+    async (p: number) => {
+      // clamp
+      const pages = Math.max(1, Math.ceil(total / pageSize));
+      const next = Math.min(Math.max(1, p), pages);
+      await reload({ page: next });
+    },
+    [reload, total, pageSize]
+  );
+
+  const setPageSize = React.useCallback(
+    (n: number) => {
+      // reset à page 1 quand on change le pageSize
+      void reload({ page: 1, pageSize: n });
     },
     [reload]
   );
 
-  const updateDroid = React.useCallback(async (id: number, payload: any) => {
-    const res = await api.put<any>(`/api/v1/droids/${id}`, payload, {
-      headers: { "Content-Type": "application/json" },
-    });
-    const updated = res?.data ?? { id, ...payload };
-    setDroids((prev) =>
-      prev.map((d) => (d.id === id ? (updated as Droid) : d))
-    );
-    return updated;
-  }, []);
+  const createDroid = React.useCallback(
+    async (payload: any) => {
+      await api.post<any>("/api/v1/droids", payload, {
+        headers: { "Content-Type": "application/json" },
+      });
+      // recharge la page courante (conserve pagination)
+      await reload();
+    },
+    [reload]
+  );
+
+  const updateDroid = React.useCallback(
+    async (id: number, payload: any) => {
+      await api.put<any>(`/api/v1/droids/${id}`, payload, {
+        headers: { "Content-Type": "application/json" },
+      });
+      await reload();
+    },
+    [reload]
+  );
 
   const deleteDroid = React.useCallback(
     async (droidOrId: number | { id: number }) => {
       const id = typeof droidOrId === "number" ? droidOrId : droidOrId.id;
       await api.delete<void>(`/api/v1/droids/${id}`);
-      setDroids((prev) => prev.filter((d) => d.id !== id));
-      setTotal((t) => Math.max(0, t - 1));
+      // si on supprime le dernier item de la dernière page, recule d’une page
+      const remaining = total - 1;
+      const pagesAfter = Math.max(1, Math.ceil(remaining / pageSize));
+      const targetPage = Math.min(page, pagesAfter);
+      await reload({ page: targetPage });
     },
-    []
+    [page, pageSize, reload, total]
   );
 
-  // Calcul de la liste filtrée (client-side)
-  const filteredDroids = React.useMemo(() => {
-    const name = filters.name.trim().toLowerCase();
-    const min = filters.priceMin ? Number(filters.priceMin) : null;
-    const max = filters.priceMax ? Number(filters.priceMax) : null;
+  // Recalculs UI
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const hasPrev = page > 1;
+  const hasNext = page < totalPages;
 
-    return droids.filter((d) => {
-      if (name && !d.name.toLowerCase().includes(name)) return false;
-      if (min !== null && d.price < min) return false;
-      if (max !== null && d.price > max) return false;
-      if (filters.stock === "IN" && d.stock <= 0) return false;
-      if (filters.stock === "OUT" && d.stock > 0) return false;
-      return true;
-    });
-  }, [droids, filters]);
-
-  // Chargement initial
+  // (re)chargement initial ou à chaque changement de filtres : reset à page 1
   React.useEffect(() => {
-    reload().catch(() => void 0);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    void reload({ page: 1 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.name, filters.priceMin, filters.priceMax, filters.stock]);
 
   const value: ContextValue = {
     droids,
-    filteredDroids,
     total,
+    page,
+    pageSize,
+    totalPages,
+    hasPrev,
+    hasNext,
+    setPageSize,
+    goToPage,
+
     loading,
     error,
     filters,
@@ -171,18 +210,11 @@ export function DroidCatalogProvider({
     deleteDroid,
   };
 
-  return (
-    <DroidCatalogContext.Provider value={value}>
-      {children}
-    </DroidCatalogContext.Provider>
-  );
+  return <DroidCatalogContext.Provider value={value}>{children}</DroidCatalogContext.Provider>;
 }
 
 export function useDroidCatalog(): ContextValue {
   const ctx = React.useContext(DroidCatalogContext);
-  if (!ctx)
-    throw new Error(
-      "useDroidCatalog must be used within <DroidCatalogProvider>"
-    );
+  if (!ctx) throw new Error("useDroidCatalog must be used within <DroidCatalogProvider>");
   return ctx;
 }

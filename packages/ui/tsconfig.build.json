@@ -1,0 +1,20 @@
+{
+  "extends": "../typescript-config/react-library.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src",
+    "declaration": true,
+    "declarationMap": true,
+    "emitDeclarationOnly": false,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "skipLibCheck": true,
+
+    "baseUrl": ".",
+    "paths": {
+      "@repo/ui/*": ["src/*"]
+    }
+  },
+  "include": ["src"]
+}

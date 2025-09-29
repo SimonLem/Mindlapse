@@ -91,7 +91,7 @@ export function Login({ className, ...props }: React.ComponentProps<"div">) {
                         className="ml-auto inline-block text-sm underline-offset-4 hover:underline"
                         onClick={(e) => e.preventDefault()}
                       >
-                        Mot de de passe oublié?
+                        Mot de passe oublié?
                       </a>
                     </div>
                     <Input
